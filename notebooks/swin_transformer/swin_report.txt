@@ -1,0 +1,273 @@
+================================================================================
+        DIABETIC RETINOPATHY DETECTION USING DEEP LEARNING
+================================================================================
+
+Architecture Name: Swin Transformer (swin_base_patch4_window7_224)
+
+--------------------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------------------
+Diabetic Retinopathy (DR) is a diabetes-induced complication that progressively
+damages the blood vessels of the retina, potentially leading to permanent vision
+loss. Early and accurate detection is critical for timely clinical intervention.
+
+This project presents an automated DR grading system using the Swin Transformer
+— a hierarchical vision transformer that uses shifted windowed self-attention to
+capture both local and global retinal features. The model classifies fundus
+images into five severity grades: No DR, Mild, Moderate, Severe, and
+Proliferative DR.
+
+A two-stage transfer learning strategy (frozen head training followed by full
+fine-tuning) was applied to adapt the ImageNet-pretrained model to the medical
+imaging domain. GradCAM explainability maps were generated to provide visual
+justification for model predictions, supporting clinical interpretability.
+
+--------------------------------------------------------------------------------
+2. DATASET DESCRIPTION
+--------------------------------------------------------------------------------
+Source      : Kaggle — "Diabetic Retinopathy 224x224 2019 Data"
+              (sovitrath/diabetic-retinopathy-224x224-2019-data)
+Downloaded  : Via KaggleHub API
+Image Folder: colored_images/
+
+Classes (5-class grading scale):
+  0 — No_DR           (No signs of diabetic retinopathy)
+  1 — Mild            (Microaneurysms only)
+  2 — Moderate        (More than microaneurysms, less than severe)
+  3 — Severe          (Extensive hemorrhages, no PDR signs)
+  4 — Proliferate_DR  (Neovascularization or vitreous/pre-retinal hemorrhage)
+
+Split:
+  Training Set  : 80% of total images
+  Validation Set: 20% of total images
+
+DataLoader:
+  Batch Size  : 32
+  Num Workers : 2
+  Shuffle     : True (train), False (validation)
+
+--------------------------------------------------------------------------------
+3. PREPROCESSING AND AUGMENTATION
+--------------------------------------------------------------------------------
+Training Transforms:
+  - RandomHorizontalFlip       : Simulates mirror-image fundus views
+  - RandomRotation(±10°)       : Handles variability in camera orientation
+  - ToTensor                   : Converts PIL image to [0,1] float tensor
+  - Normalize
+      Mean : [0.485, 0.456, 0.406]   (ImageNet mean)
+      Std  : [0.229, 0.224, 0.225]   (ImageNet std)
+
+Validation Transforms:
+  - ToTensor
+  - Normalize (same mean and std as above)
+  Note: No augmentation applied during validation to ensure consistent metrics.
+
+Image Size: 224 × 224 × 3 (RGB)
+
+--------------------------------------------------------------------------------
+4. MODEL ARCHITECTURE DESCRIPTION
+--------------------------------------------------------------------------------
+Base Model : Swin Transformer Base — swin_base_patch4_window7_224
+Source     : timm (PyTorch Image Models)
+Pretrained : ImageNet-21k / ImageNet-1k
+
+Key Architectural Properties:
+  - Patch Size          : 4 × 4 pixels per token
+  - Window Size         : 7 × 7 patches per attention window
+  - Shifted Window      : Alternating regular and shifted windows enable
+                          cross-window attention without global computation
+  - Hierarchical Stages : 4 stages with patch merging, producing multi-scale
+                          feature maps (like a CNN pyramid)
+  - Embedding Dim       : 128 (Base variant)
+  - Attention Heads     : [4, 8, 16, 32] per stage
+  - Depth per Stage     : [2, 2, 18, 2]
+  - MLP Ratio           : 4.0
+
+Classification Head:
+  - The final LayerNorm + Linear classification head was replaced with a
+    5-class linear layer to match the DR grading task.
+
+Target Layer for GradCAM:
+  - model.layers[-1].blocks[-1].norm1
+    (Final block's normalization layer in the last Swin stage)
+
+Total Parameters  : ~87 million (Base variant)
+Output            : 5-class logits → argmax for prediction
+
+--------------------------------------------------------------------------------
+5. TRAINING STRATEGY
+--------------------------------------------------------------------------------
+Two-Stage Transfer Learning:
+
+  ── STAGE 1: Head-Only Training ──────────────────────────────────────────────
+  Epochs      : 5
+  Trainable   : Classification head only (all backbone parameters frozen)
+  Optimizer   : Adam
+  Learning Rate: 1e-3
+  Loss        : CrossEntropyLoss
+  Purpose     : Warm up the randomly initialized classification head without
+                disturbing pretrained ImageNet weights.
+
+  ── STAGE 2: Full Fine-Tuning ────────────────────────────────────────────────
+  Epochs      : 15  (Total epochs: 20)
+  Trainable   : All model parameters unfrozen
+  Optimizer   : Adam
+  Learning Rate: 1e-5  (low LR to avoid catastrophic forgetting)
+  Loss        : CrossEntropyLoss
+  Purpose     : Gradually adapt all layers to the retinal imaging domain.
+
+Checkpointing:
+  - Full checkpoint (model + optimizer state) saved as: swin_checkpoint.pth
+  - Model weights only saved as               : swin_transformer_dr.pth
+
+Device: CUDA (GPU) if available, else CPU
+
+--------------------------------------------------------------------------------
+6. EVALUATION METRICS
+--------------------------------------------------------------------------------
+
+  6.1 ACCURACY
+  ─────────────────────────────────────────────────────────────────────────────
+  Computed as the fraction of correctly classified images over the full
+  validation set.
+
+      Accuracy = Correct Predictions / Total Predictions
+
+  Validation accuracy was tracked per epoch across all 20 training epochs.
+
+  6.2 CONFUSION MATRIX
+  ─────────────────────────────────────────────────────────────────────────────
+  A 5×5 matrix showing the count of predictions per true class vs. predicted
+  class. Visualized as a heatmap using seaborn with 'Blues' colormap.
+
+  Rows    : Actual class labels
+  Columns : Predicted class labels
+  Diagonal: Correct classifications
+
+  Output: notebooks/swin_transformer/outputs/confusion_matrix.png
+
+  6.3 ROC-AUC CURVES
+  ─────────────────────────────────────────────────────────────────────────────
+  One-vs-Rest (OvR) ROC curves computed for each of the 5 classes using
+  softmax probabilities. AUC score reported per class and overall.
+
+  Method      : sklearn roc_auc_score with multi_class='ovr'
+  Binarization: label_binarize for multi-class probability extraction
+
+  Output: notebooks/swin_transformer/outputs/roc_auc.png
+
+  6.4 CLASSIFICATION REPORT
+  ─────────────────────────────────────────────────────────────────────────────
+  Per-class breakdown of:
+    - Precision : TP / (TP + FP)
+    - Recall    : TP / (TP + FN)
+    - F1-Score  : 2 × (Precision × Recall) / (Precision + Recall)
+    - Support   : Number of ground-truth samples per class
+
+  Generated using sklearn.metrics.classification_report
+
+  6.5 GRADCAM EXPLAINABILITY
+  ─────────────────────────────────────────────────────────────────────────────
+  Gradient-weighted Class Activation Mapping (GradCAM) was applied to
+  visualize which regions of the fundus image influenced the model's decision.
+
+  Target Layer : model.layers[-1].blocks[-1].norm1
+  Library      : pytorch-grad-cam
+  Overlay      : show_cam_on_image() blends heatmap over original RGB image
+
+  Two sets of GradCAM outputs:
+    Correct Predictions: One sample per class where True == Predicted
+    Wrong Predictions  : One sample per class where True != Predicted
+
+  Output folder: notebooks/swin_transformer/outputs/gradcam/
+    ├── correct/   (GradCAM on correctly classified samples)
+    └── wrong/     (GradCAM on misclassified samples)
+
+--------------------------------------------------------------------------------
+7. STRENGTHS OF THE PROPOSED SYSTEM
+--------------------------------------------------------------------------------
+
+  7.1 TECHNICAL STRENGTHS
+  ─────────────────────────────────────────────────────────────────────────────
+  - Hierarchical Feature Representation: Swin Transformer captures multi-scale
+    features (fine-grained microaneurysms to coarse structural changes) through
+    patch merging across 4 stages — unlike ViT which uses flat tokens.
+
+  - Shifted Window Attention: Enables cross-region context modeling with linear
+    computational complexity O(n) relative to image size, making it efficient
+    for high-resolution fundus images.
+
+  - Two-Stage Fine-Tuning: Prevents catastrophic forgetting by first warming up
+    the head before globally fine-tuning, leading to stable convergence.
+
+  - Explainability via GradCAM: Provides visual evidence for each prediction,
+    making the black-box transformer interpretable — critical for clinical
+    deployment and auditing.
+
+  - Standard Normalization: ImageNet mean/std normalization ensures compatibility
+    with the pretrained backbone and stable gradient flow.
+
+  7.2 MEDICAL RELEVANCE
+  ─────────────────────────────────────────────────────────────────────────────
+  - Clinically Aligned Grading: The 5-class output directly maps to the
+    International DR Clinical Classification Scale used by ophthalmologists.
+
+  - GradCAM Localization: Heatmaps highlight lesion-associated regions such as
+    hemorrhages, exudates, and neovascularization — aligning with clinical
+    diagnostic markers.
+
+  - Early Detection Capability: By classifying Mild and Moderate stages, the
+    system enables early intervention before vision-threatening progression.
+
+  - Screening Support: High throughput automated screening can assist in
+    resource-limited settings where ophthalmologists are scarce.
+
+  7.3 MODEL LIMITATIONS
+  ─────────────────────────────────────────────────────────────────────────────
+  - Class Imbalance: The APTOS 2019 dataset is heavily skewed toward No_DR
+    samples, which may bias the model and reduce recall on Severe/Proliferative
+    classes. No explicit resampling or weighted loss was applied.
+
+  - Single Augmentation Strategy: Augmentation is limited to flip and rotation.
+    Retinal-specific augmentations (brightness, contrast, CLAHE) were not used,
+    which may reduce generalization across imaging devices.
+
+  - Validation Transform Leak: val_dataset.dataset.transform is overwritten
+    after split, which also affects the training subset's transform reference.
+    A proper Subset wrapper with independent transforms is recommended.
+
+  - Fixed Input Resolution: The model requires 224×224 input. High-resolution
+    fundus images must be downsampled, potentially losing fine lesion detail.
+
+  - No Scheduler: Training does not use a learning rate scheduler (e.g.,
+    CosineAnnealingLR), which may lead to suboptimal convergence in later epochs.
+
+  - No Test Set: Evaluation is performed only on a validation split from the
+    same distribution. An independent held-out test set is needed for unbiased
+    performance reporting.
+
+--------------------------------------------------------------------------------
+8. GRAPHS
+--------------------------------------------------------------------------------
+
+  8.1 TRAINING LOSS CURVE
+  ─────────────────────────────────────────────────────────────────────────────
+  Plot   : train_losses vs. Epoch (1–20)
+  Stage 1 (Epochs 1–5)  : Head-only training, typically shows rapid initial
+                           loss reduction as the classification layer adapts.
+  Stage 2 (Epochs 6–20) : Full fine-tuning at lr=1e-5, gradual continued
+                           decrease as backbone layers adapt to retinal domain.
+  Output : notebooks/swin_transformer/outputs/training_loss.png
+
+  8.2 TRAINING ACCURACY CURVE
+  ─────────────────────────────────────────────────────────────────────────────
+  Plot   : val_accuracies vs. Epoch (1–20)
+  Stage 1 (Epochs 1–5)  : Accuracy rises quickly due to head warm-up.
+  Stage 2 (Epochs 6–20) : Steady improvement as all layers fine-tune.
+  The gap between Stage 1 and Stage 2 accuracy reflects the benefit of
+  full model fine-tuning over head-only training.
+  Output : notebooks/swin_transformer/outputs/training_Accuracy.png
+
+================================================================================
+END OF REPORT
+================================================================================
