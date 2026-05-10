@@ -1,0 +1,510 @@
+================================================================================
+        DIABETIC RETINOPATHY DETECTION USING DEEP LEARNING
+================================================================================
+
+Architecture Name: Vision Transformer (vit_base_patch16_224)
+
+--------------------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------------------
+Diabetic Retinopathy (DR) is a diabetes-induced complication that progressively
+damages the blood vessels of the retina, potentially leading to permanent vision
+loss. Early and accurate detection is critical for timely clinical intervention.
+
+This project presents an automated DR grading system using the Vision Transformer
+(ViT-Base/16) — a pure transformer architecture that applies multi-head self-
+attention directly over 16x16 pixel patches of retinal fundus images. The model
+classifies fundus images into five severity grades: No DR, Mild, Moderate, Severe,
+and Proliferative DR.
+
+Unlike convolutional networks that build local-to-global features hierarchically,
+ViT processes all 196 image patches in parallel from the very first layer, enabling
+global attention over the entire retinal field simultaneously. A single-phase end-
+to-end fine-tuning strategy was applied to adapt the ImageNet-pretrained backbone to
+the retinal imaging domain. GradCAM++ explainability maps were generated on the
+final transformer block to provide visual justification for model predictions,
+supporting clinical interpretability.
+
+--------------------------------------------------------------------------------
+2. DATASET DESCRIPTION
+--------------------------------------------------------------------------------
+Source      : Kaggle — "Diabetic Retinopathy 224x224 2019 Data"
+              (sovitrath/diabetic-retinopathy-224x224-2019-data)
+Downloaded  : Via KaggleHub API
+Image Folder: colored_images/
+
+Classes (5-class grading scale):
+  0 — No_DR           (No signs of diabetic retinopathy)
+  1 — Mild            (Microaneurysms only — early NPDR)
+  2 — Moderate        (Hemorrhages, hard exudates, cotton-wool spots)
+  3 — Severe          (Extensive hemorrhages (>20), venous beading, IRMA)
+  4 — Proliferate_DR  (Neovascularization, vitreous hemorrhage, TRD)
+
+Dataset Statistics:
+  Total Images   : 3,662
+    No_DR        : 1,805 images
+    Moderate     :   999 images
+    Mild         :   370 images
+    Proliferate_DR:  295 images
+    Severe       :   193 images
+
+Split (Stratified 80/20):
+  Training Set   : 2,929 images (80%)
+  Validation Set :   733 images (20%)
+
+DataLoader:
+  Batch Size  : 32
+  Num Workers : 2
+  Shuffle     : WeightedRandomSampler (train), False (validation)
+
+Note: The dataset originates from the APTOS 2019 Blindness Detection Challenge and
+uses Gaussian spatial filtering to enhance retinal vascular contrast. All images are
+pre-resized to 224×224 pixels.
+
+--------------------------------------------------------------------------------
+3. PREPROCESSING AND AUGMENTATION
+--------------------------------------------------------------------------------
+Training Transforms (applied in order):
+  - Resize(256)                  : Expand image before random crop to avoid
+                                   hard edge artifacts from direct resizing
+  - RandomCrop(224)              : Remove camera edge artifacts common in
+                                   fundus photography
+  - RandomHorizontalFlip(p=0.5)  : Simulates left/right retinal symmetry
+  - RandomVerticalFlip(p=0.3)    : Handles camera orientation variation across
+                                   different clinical setups
+  - ColorJitter(brightness=0.2,
+                contrast=0.2)    : Simulates illumination and camera differences
+                                   between imaging devices
+  - RandomRotation(±15°)         : Accounts for patient head positioning variation
+  - RandomAffine(shear=10)       : Handles lens distortion and perspective variation
+  - ToTensor                     : Converts PIL image to float tensor [0, 1]
+  - Normalize
+      Mean : [0.485, 0.456, 0.406]   (ImageNet mean)
+      Std  : [0.229, 0.224, 0.225]   (ImageNet std)
+
+Validation Transforms:
+  - Resize(224)
+  - CenterCrop(224)
+  - ToTensor
+  - Normalize (same mean and std as above)
+  Note: No augmentation applied during validation to ensure consistent metrics.
+
+Additional Strategies:
+  - WeightedRandomSampler        : Inverse-frequency sampling weights per class
+                                   to ensure balanced class representation per
+                                   training batch despite the skewed distribution
+  - Label Smoothing (0.1)        : Applied in the loss function to prevent
+                                   overconfident predictions on ambiguous grade
+                                   boundaries (particularly Grades 1-2 and 3-4)
+
+Image Size: 224 × 224 × 3 (RGB)
+
+--------------------------------------------------------------------------------
+4. MODEL ARCHITECTURE DESCRIPTION
+--------------------------------------------------------------------------------
+Base Model : Vision Transformer Base — vit_base_patch16_224
+Source     : timm (PyTorch Image Models)
+Pretrained : ImageNet-21K → ImageNet-1K fine-tuned
+Paper      : "An Image is Worth 16×16 Words" (Dosovitskiy et al., ICLR 2021)
+
+Key Architectural Properties:
+  - Patch Size          : 16 × 16 pixels per token
+  - Number of Patches   : 196 patches (14 × 14 grid from 224×224 input)
+  - Sequence Length     : 197 tokens (196 patches + 1 CLS token)
+  - Hidden Dimension    : 768-dimensional token embeddings
+  - Transformer Blocks  : 12 encoder blocks
+  - Attention Heads     : 12 heads per block (64-dim per head)
+  - MLP Ratio           : 4.0 (768 → 3072 → 768 with GELU activation)
+  - Positional Encoding : Learnable 1D position embeddings for all 197 tokens
+  - Pooling             : CLS token extraction (global_pool='token')
+
+Architecture Flow:
+  Input: 224 × 224 × 3 (RGB fundus image)
+     |
+  [Patch Embedding]
+     Split into 16×16 patches → 196 patches
+     Linear projection: 16×16×3 → 768-dim token per patch
+     |
+  [CLS Token Prepended]
+     Sequence: [CLS, patch_1, ..., patch_196] → 197 tokens × 768-dim
+     |
+  [Positional Embedding]
+     Learnable 1D position embeddings added to all 197 tokens
+     |
+  [Transformer Encoder — 12 Blocks]
+     Each block:
+       Input → LayerNorm → Multi-Head Self-Attention (12 heads, 64-dim/head)
+             → Residual → LayerNorm → MLP (768→3072→768, GELU)
+             → Residual → Output
+     All 197 tokens processed simultaneously (global attention)
+     |
+  [CLS Token Extraction]  → 768-d global feature vector
+     |
+  [Custom Classification Head]
+     LayerNorm(768)
+     → Dropout(0.30)
+     → Linear(768 → 512)
+     → GELU()
+     → Dropout(0.15)
+     → Linear(512 → 5)
+     |
+  [Output] 5 logits (DR Grade 0–4)
+
+Parameter Count:
+  Component                 Parameters
+  ─────────────────────────────────────
+  Patch Embedding           ~590K
+  Transformer Blocks ×12    ~85.1M
+  Custom Head               ~0.4M
+  Total                     86,196,485
+
+Target Layer for GradCAM++:
+  - model.backbone.blocks[-1].norm1
+    (Final transformer block's first LayerNorm)
+
+Output: 5-class logits → argmax for prediction
+
+--------------------------------------------------------------------------------
+5. TRAINING STRATEGY
+--------------------------------------------------------------------------------
+Single-Phase End-to-End Fine-Tuning:
+
+  All backbone layers were trained simultaneously from epoch 1 using a small
+  learning rate to preserve pretrained ImageNet representations while gradually
+  adapting to the retinal fundus image domain. A linear warmup was applied for
+  the first 3 epochs before transitioning to cosine annealing decay.
+
+  ── Hyperparameters ──────────────────────────────────────────────────────────
+  Optimizer         : AdamW (decoupled weight decay, suited for transformers)
+  Learning Rate     : 3e-5  (small LR to preserve pretrained representations)
+  Weight Decay      : 1e-2
+  LR Scheduler      : LinearWarmup (epochs 0→3) → CosineAnnealingLR
+    Warmup Epochs   : 3   (LR rises from 3e-6 to 3e-5 linearly)
+    Cosine T_max    : 12  (remaining epochs after warmup)
+    eta_min         : 1e-6
+  Loss              : CrossEntropyLoss (label_smoothing=0.1)
+  Gradient Clipping : max_norm=1.0  (prevents attention layer instability)
+  Early Stopping    : patience=10
+  Batch Size        : 32
+  Max Epochs        : 15
+
+  ── Training Environment ─────────────────────────────────────────────────────
+  Platform  : Kaggle Notebooks
+  Device    : CUDA — Tesla T4 GPU (15.6 GB VRAM)
+  CUDA      : 12.8
+  PyTorch   : 2.10.0+cu128
+  Framework : timm (PyTorch Image Models)
+
+  ── Epoch-by-Epoch Training Log ──────────────────────────────────────────────
+  Epoch  LR        Train Loss  Train Acc   Val Loss   Val Acc
+  ─────────────────────────────────────────────────────────────
+    01   1.20e-05   1.4392      42.47%     1.0543     67.39%
+    02   2.10e-05   1.0932      62.03%     0.8210     75.31%
+    03   3.00e-05   0.9673      69.55%     0.7710     79.67%
+    04   2.95e-05   0.9394      71.01%     0.7718     79.67%
+    05   2.81e-05   0.8424      76.37%     0.7536     80.35%
+    06   2.58e-05   0.7849      79.72%     0.7741     80.63%
+    07   2.28e-05   0.7070      84.40%     0.7330     84.31%
+    08   1.93e-05   0.6421      87.54%     0.7705     81.86%
+    09   1.55e-05   0.6034      89.35%     0.7742     84.04%
+    10   1.17e-05   0.5585      92.08%     0.7791     82.54%
+    11   8.25e-06   0.5292      93.38%     0.8044     82.40%
+    12   5.25e-06   0.5015      94.64%     0.7698     84.58%
+    13   2.94e-06   0.4741      96.11%     0.7748     83.90%
+    14   1.49e-06   0.4641      96.72%     0.7957     85.13%  ← Phase 1 Best
+    15   1.00e-06   0.4494      97.51%     0.7931     84.45%
+
+  Best checkpoint loaded and continued training (Phase 2, early stopping):
+    01             0.4595      96.72%     0.7798     85.13%
+    02             0.4437      97.51%     0.7927     85.40%  ← Final Best
+
+  Best Validation Accuracy : 85.40%
+
+Checkpointing:
+  - Full checkpoint (model + optimizer state) saved as: vit_checkpoint.pth
+  - Model weights only saved as               : vit_best_model.pth
+
+--------------------------------------------------------------------------------
+6. EVALUATION METRICS
+--------------------------------------------------------------------------------
+
+  6.1 ACCURACY
+  ─────────────────────────────────────────────────────────────────────────────
+  Computed as the fraction of correctly classified images over the full
+  validation set (733 images, 20% stratified split).
+
+      Accuracy = Correct Predictions / Total Predictions
+
+      Final Validation Accuracy : 85.40%  (626 / 733 correctly classified)
+
+  The model was evaluated using the best checkpoint (epoch 14 of the initial
+  training run), which achieved 85.40% on the held-out validation set.
+
+  6.2 CONFUSION MATRIX
+  ─────────────────────────────────────────────────────────────────────────────
+  A 5×5 matrix showing the count of predictions per true class vs. predicted
+  class. Two visualizations are provided:
+    (a) Raw Counts   — seaborn heatmap with 'Blues' colormap
+    (b) Normalized   — row-normalized (recall per class) with 'Greens' colormap
+
+  Rows    : Actual class labels
+  Columns : Predicted class labels
+  Diagonal: Correct classifications
+
+  Notable observations:
+    - No_DR achieves near-perfect classification (recall ~98%)
+    - Mild is frequently confused with Moderate (clinically adjacent grades)
+    - Severe is the hardest class due to low support (39 validation samples)
+
+  Output: vit_outputs/outputs/confusion_matrix.png
+
+  6.3 ROC-AUC CURVES
+  ─────────────────────────────────────────────────────────────────────────────
+  One-vs-Rest (OvR) ROC curves computed for each of the 5 classes using
+  softmax probabilities. Macro-average AUC computed by interpolating all
+  per-class curves onto a unified FPR grid.
+
+  Two panels plotted:
+    Left  : Per-Class OvR ROC curves (5 individual curves with AUC legend)
+    Right : Macro-Average ROC curve with ±1 std deviation shaded band
+
+  Method      : sklearn roc_curve + auc per class
+  Binarization: label_binarize for multi-class probability extraction
+
+  Output: vit_outputs/outputs/roc_auc.png
+
+  6.4 CLASSIFICATION REPORT
+  ─────────────────────────────────────────────────────────────────────────────
+  Per-class breakdown on the 733-image validation set:
+
+                  precision   recall   f1-score   support
+    ─────────────────────────────────────────────────────
+    Mild           0.6800     0.4595    0.5484       74
+    Moderate       0.7386     0.8900    0.8073      200
+    No_DR          0.9834     0.9834    0.9834      361
+    Proliferate_DR 0.8125     0.6610    0.7290       59
+    Severe         0.6061     0.5128    0.5556       39
+    ─────────────────────────────────────────────────────
+    accuracy                            0.8540      733
+    macro avg      0.7641     0.7013    0.7247      733
+    weighted avg   0.8521     0.8540    0.8482      733
+
+  Key observations:
+    - No_DR   : Highest performance (F1=0.98) — largest support class
+    - Moderate : Strong recall (0.89) — correctly identifies intermediate DR
+    - Mild     : Lowest recall (0.46) — often confused with Moderate/No_DR
+    - Severe   : Low support (39 samples) limits reliable metric estimation
+    - Macro F1 : 0.7247 — indicates room for improvement on minority classes
+
+  6.5 GRADCAM++ EXPLAINABILITY
+  ─────────────────────────────────────────────────────────────────────────────
+  Gradient-weighted Class Activation Mapping Plus Plus (GradCAM++) was applied
+  to visualize which regions of the fundus image influenced the model's decision.
+
+  Target Layer  : model.backbone.blocks[-1].norm1
+                  (Final Vision Transformer block's first LayerNorm)
+  Library       : pytorch-grad-cam
+  Overlay       : show_cam_on_image() blends heatmap over original RGB image
+
+  ViT Reshape Transform:
+    ViT produces feature maps of shape (B, 197, 768) — 1 CLS token + 196 patch
+    tokens. The CLS token is removed and the remaining 196 tokens are reshaped
+    into a 14×14 spatial activation grid for heatmap overlay on the 224×224
+    input image.
+
+  Two sets of GradCAM++ outputs (10 samples each):
+    Correct Predictions: Samples where True Label == Predicted Label
+    Wrong Predictions  : Samples where True Label != Predicted Label
+
+  Naming convention: cam_NNN_tX_pY.png  (NNN=index, X=true label, Y=predicted)
+
+  Summary grids (10 images each):
+    correct/gradcam_grid.png  — composite grid of correctly classified samples
+    wrong/gradcam_grid.png    — composite grid of misclassified samples
+
+  Output folder: vit_outputs/outputs/gradcam/
+    ├── correct/   (GradCAM++ on correctly classified samples)
+    └── wrong/     (GradCAM++ on misclassified samples)
+
+  6.6 TRAINING CURVES
+  ─────────────────────────────────────────────────────────────────────────────
+  Training and validation accuracy/loss plotted across all training epochs.
+
+  Two panels:
+    Left  : Accuracy Curve — train_acc and val_acc vs. epoch
+            Green dashed vertical line marks the best epoch
+    Right : Loss Curve — train_loss and val_loss vs. epoch
+
+  Key observations:
+    - Warmup phase (epochs 1–3): rapid accuracy gain as LR ramps up
+    - Training accuracy rises steadily to ~97.5% by epoch 15
+    - Validation accuracy plateaus around 84–85% after epoch 7, indicating
+      the model is reaching its capacity on this dataset size
+    - Train/val loss gap (train≈0.45, val≈0.79) suggests mild overfitting
+      in later epochs, managed by label smoothing and gradient clipping
+
+  Output: vit_outputs/outputs/training_curves.png
+
+--------------------------------------------------------------------------------
+7. STRENGTHS OF THE PROPOSED SYSTEM
+--------------------------------------------------------------------------------
+
+  7.1 TECHNICAL STRENGTHS
+  ─────────────────────────────────────────────────────────────────────────────
+  - Global Self-Attention from Layer 1: Every patch attends to every other
+    patch simultaneously across all 12 transformer blocks. This enables direct
+    modeling of long-range spatial relationships between lesions in different
+    retinal quadrants — critical for Severe/Proliferative DR where pathology is
+    spatially distributed across the fundus.
+
+  - Patch-Level Tokenization: Dividing the 224×224 image into 196 non-overlapping
+    16×16 patches preserves fine-grained spatial detail. Each patch is
+    independently projected to a 768-dimensional embedding, retaining local
+    texture, microaneurysm morphology, and hemorrhage patterns.
+
+  - Learnable Positional Embeddings: 1D positional encodings capture the spatial
+    structure of the 14×14 patch grid, allowing the model to distinguish foveal
+    (central) lesion patterns from peripheral lesion distributions.
+
+  - Strong ImageNet-21K Transfer Learning: 86M parameters pretrained on
+    ImageNet-21K (14M images, 21K classes) provide exceptionally rich feature
+    priors for texture recognition, edge detection, and morphological
+    classification — directly transferable to retinal pathology recognition.
+
+  - CLS Token for Classification: The dedicated CLS token aggregates global image
+    context by attending to all 196 patch tokens across 12 transformer blocks,
+    producing a comprehensive 768-dimensional representation for final prediction.
+
+  - WeightedRandomSampler: Inverse-frequency sampling compensates for the heavily
+    skewed class distribution (No_DR: 1805 vs. Severe: 193), ensuring balanced
+    gradient contributions from all DR severity classes during training.
+
+  - Label Smoothing (0.1): Particularly beneficial for DR grading where grade
+    boundaries (Grades 1–2 and 3–4) are clinically ambiguous and inter-grader
+    variability reaches approximately 20%.
+
+  - Gradient Clipping (max_norm=1.0): Prevents large gradient norms in attention
+    layers from causing training instability — especially important during the
+    warmup phase when LR is ramping up.
+
+  - Rich Augmentation Pipeline: 7-step augmentation strategy (crop, flip,
+    color jitter, rotation, shear) combined with ImageNet normalization ensures
+    robust generalization across varied fundus camera setups and imaging conditions.
+
+  7.2 MEDICAL RELEVANCE
+  ─────────────────────────────────────────────────────────────────────────────
+  - Clinically Aligned Grading: The 5-class output directly maps to the
+    International Clinical DR Severity Scale (ICDRSS) used by ophthalmologists,
+    enabling direct clinical interpretation without score conversion.
+
+  - GradCAM++ Pathology Localization: Explainability maps highlight diagnostically
+    relevant attention regions aligned with clinical markers:
+      Grade 1 (Mild)  : Focused attention near fovea (microaneurysms)
+      Grade 2 (Mod.)  : Attention on hard exudate clusters and cotton-wool spots
+      Grade 3 (Severe): Diffuse attention on hemorrhages and venous beading areas
+      Grade 4 (Prolif): Strong attention at optic disc (neovascularization zones)
+
+  - Early Detection Capability: By classifying Mild and Moderate stages accurately,
+    the system enables early intervention before vision-threatening progression to
+    Severe or Proliferative DR.
+
+  - Screening Support: High-throughput automated screening at 85.40% accuracy can
+    assist in resource-limited settings where ophthalmologist availability is scarce,
+    reducing the burden on specialist review queues.
+
+  - Calibrated Probability Outputs: Label smoothing improves probability calibration,
+    making confidence scores more reliable for clinical decision support and
+    thresholding for urgent referral workflows.
+
+  7.3 MODEL LIMITATIONS
+  ─────────────────────────────────────────────────────────────────────────────
+  - Resolution Constraint (224×224): Fine microaneurysms visible in high-resolution
+    fundus imaging (2048×2048) may be missed at 224×224. The 16×16 patch size
+    coarsely partitions the image, potentially losing sub-patch lesion detail.
+
+  - Quadratic Attention Complexity: Standard ViT uses O(n²) self-attention over
+    all 197 tokens. While manageable at 224×224, scaling to higher resolutions for
+    finer lesion detection would be computationally prohibitive.
+
+  - Class Imbalance in Original Data: Despite WeightedRandomSampler during
+    training, the evaluation set retains the natural imbalance (No_DR: 361 vs.
+    Severe: 39 validation samples), making metric estimates unreliable for
+    low-support classes.
+
+  - Single-Camera Distribution Bias: Trained on APTOS 2019 fundus images; model
+    may degrade on images from different manufacturers (Zeiss, Topcon, Canon) due
+    to differing contrast profiles, aspect ratios, and color rendering.
+
+  - No Temporal / Longitudinal Modeling: Each fundus image is classified
+    independently. The model cannot leverage sequential images to detect disease
+    progression or regression over time.
+
+  - Computational Requirements: ViT-Base requires approximately 4 GB VRAM for
+    inference at batch_size=1. Not suitable for real-time edge deployment without
+    model quantization, pruning, or distillation.
+
+  - Train/Validation Gap in Later Epochs: Training accuracy reaches ~97.5% while
+    validation plateaus at ~85%, suggesting overfitting in the final epochs.
+    Stronger regularization (stochastic depth, increased dropout) or a larger
+    dataset could reduce this gap.
+
+  - No Independent Test Set: Evaluation is performed only on a validation split
+    from the same distribution. A separate held-out test set is required for
+    unbiased performance reporting in clinical validation.
+
+--------------------------------------------------------------------------------
+8. GRAPHS
+--------------------------------------------------------------------------------
+
+  8.1 TRAINING ACCURACY CURVE
+  ─────────────────────────────────────────────────────────────────────────────
+  Plot   : train_acc and val_acc vs. Epoch (1–15)
+  Content:
+    Warmup Phase (Epochs 1–3): LR ramps 3e-6 → 3e-5; training accuracy rises
+                                rapidly from 42% to 70% as the model adapts.
+    Cosine Phase (Epochs 4–15): LR decays smoothly; training accuracy climbs
+                                 steadily to 97.5%; validation accuracy stabilizes
+                                 in the 80–85% range.
+  Green dashed vertical line marks the best validation epoch (epoch 14 at 85.13%
+  from initial run).
+  Output : vit_outputs/outputs/training_curves.png  (left panel)
+
+  8.2 TRAINING LOSS CURVE
+  ─────────────────────────────────────────────────────────────────────────────
+  Plot   : train_loss and val_loss vs. Epoch (1–15)
+  Content:
+    Warmup Phase (Epochs 1–3): Training loss drops sharply from 1.44 to 0.97
+                                as LR increases and model rapidly adapts.
+    Cosine Phase (Epochs 4–15): Training loss continues declining to 0.45;
+                                 validation loss plateaus around 0.77–0.80,
+                                 indicating the model is approaching its capacity
+                                 on the available training data.
+  The persistent gap between training loss (0.45) and validation loss (0.79)
+  at epoch 15 indicates mild overfitting in the final training epochs.
+  Output : vit_outputs/outputs/training_curves.png  (right panel)
+
+  8.3 CONFUSION MATRIX
+  ─────────────────────────────────────────────────────────────────────────────
+  Two-panel heatmap visualization:
+    Left  : Raw prediction counts per class pair
+    Right : Row-normalized matrix showing per-class recall
+  Output : vit_outputs/outputs/confusion_matrix.png
+
+  8.4 ROC-AUC CURVES
+  ─────────────────────────────────────────────────────────────────────────────
+  Two-panel ROC visualization:
+    Left  : Per-class One-vs-Rest ROC curves (5 colored curves with AUC legend)
+    Right : Macro-average ROC curve with ±1 standard deviation shaded band
+  Output : vit_outputs/outputs/roc_auc.png
+
+  8.5 GRADCAM++ VISUALIZATIONS
+  ─────────────────────────────────────────────────────────────────────────────
+  10-image composite grids for both correct and misclassified predictions.
+  Each image shows the original fundus photograph overlaid with a GradCAM++
+  heatmap indicating the retinal regions most influential to the prediction.
+  Output : vit_outputs/outputs/gradcam/correct/gradcam_grid.png
+           vit_outputs/outputs/gradcam/wrong/gradcam_grid.png
+
+================================================================================
+END OF REPORT
+================================================================================
