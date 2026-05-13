@@ -1,0 +1,190 @@
+FIGURES REQUIRED FOR DR_Blackbook.docx
+======================================
+Total: 23 figures
+
+Legend:
+  [AVAILABLE] = PNG file already exists in the workspace (path given)
+  [CREATE]    = you need to draw/generate this figure manually
+
+------------------------------------------------------------------------
+CHAPTER 3 — DESIGN DETAILS
+------------------------------------------------------------------------
+
+Fig 1  |  System Architecture of DR Detection System
+       |  Caption : Fig 3.1: System Architecture of DR Detection System
+       |  Status  : [CREATE] — draw a block diagram showing the 6 layers:
+       |            Image Upload → Preprocessing → Model Inference →
+       |            Post-processing → GradCAM Explainability → Web Display
+
+Fig 2  |  Data Flow Diagram (DFD)
+       |  Caption : Fig 3.2: Data Flow Diagram
+       |  Status  : [CREATE] — draw a 2-level DFD (user → system → model → output)
+
+Fig 3  |  Activity Diagram
+       |  Caption : Fig 3.3: Activity Diagram
+       |  Status  : [CREATE] — draw an activity/flow diagram of the DR detection workflow
+
+Fig 4  |  Use Case Diagram
+       |  Caption : Fig 3.4: Use Case Diagram
+       |  Status  : [CREATE] — actors: Patient, Doctor, Admin; use cases listed in §3.3.3
+
+Fig 5  |  Sequence Diagram
+       |  Caption : Fig 3.5: Sequence Diagram
+       |  Status  : [CREATE] — objects: User, Browser, Flask Backend, Model, Storage
+
+Fig 6  |  APTOS 2019 Dataset Class Distribution
+       |  Caption : Fig 3.6: APTOS 2019 Class Distribution
+       |  Status  : [CREATE] — bar/pie chart of the 5-class counts (can be generated
+       |            from the dataset CSV in datasets/aptos2019/)
+
+Fig 7  |  Sample Fundus Images (one per class)
+       |  Caption : Fig 3.7: Sample Fundus Images (one per class)
+       |  Status  : [CREATE] — collage of 5 sample images, one per severity grade
+
+------------------------------------------------------------------------
+CHAPTER 5 — RESULTS (InceptionResNetV2)
+------------------------------------------------------------------------
+
+Fig 8  |  InceptionResNetV2 — Training & Validation Accuracy / Loss Curves
+       |  Caption : Fig 5.1
+       |  Status  : [AVAILABLE — 2 files; combine or use individually]
+       |  Files   :
+       |    notebooks\InceptionResnetV2\output\accuracyCurve.png
+       |    notebooks\InceptionResnetV2\output\lossCurve.png
+
+Fig 9  |  InceptionResNetV2 — Confusion Matrix
+       |  Caption : Fig 5.2
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\InceptionResnetV2\output\confusion_matrix_inceptionresnetv2.png
+
+Fig 10 |  InceptionResNetV2 — ROC-AUC Curves
+       |  Caption : Fig 5.3
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\InceptionResnetV2\output\roc_auc_inceptionresnetv2.png
+
+Fig 11 |  InceptionResNetV2 — GradCAM Heatmap
+       |  Caption : Fig 5.4
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\InceptionResnetV2\output\gradcam_output.png
+
+------------------------------------------------------------------------
+CHAPTER 5 — RESULTS (Swin Transformer)
+------------------------------------------------------------------------
+
+Fig 12 |  Swin Transformer — Training Loss & Validation Accuracy
+       |  Caption : Fig 5.5
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\swin_transformer\outputs\training_loss.png
+
+Fig 13 |  Swin Transformer — Confusion Matrix
+       |  Caption : Fig 5.6
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\swin_transformer\outputs\confusion_matrix.png
+
+Fig 14 |  Swin Transformer — ROC-AUC Curves
+       |  Caption : Fig 5.7
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\swin_transformer\outputs\roc_auc.png
+
+Fig 15 |  Swin Transformer — GradCAM Samples (Correct / Wrong)
+       |  Caption : Fig 5.8
+       |  Status  : [AVAILABLE — multiple files; use a grid/collage]
+       |  Files   :
+       |    notebooks\swin_transformer\outputs\gradcam\correct\no_dr.png
+       |    notebooks\swin_transformer\outputs\gradcam\correct\mild.png
+       |    notebooks\swin_transformer\outputs\gradcam\correct\moderate.png
+       |    notebooks\swin_transformer\outputs\gradcam\correct\severe.png
+       |    notebooks\swin_transformer\outputs\gradcam\correct\proliferative.png
+       |    notebooks\swin_transformer\outputs\gradcam\wrong\mild.png
+       |    notebooks\swin_transformer\outputs\gradcam\wrong\moderate.png
+       |    notebooks\swin_transformer\outputs\gradcam\wrong\severe.png
+       |    notebooks\swin_transformer\outputs\gradcam\wrong\proliferative.png
+
+------------------------------------------------------------------------
+CHAPTER 5 — RESULTS (Vision Transformer)
+------------------------------------------------------------------------
+
+Fig 16 |  Vision Transformer — Training Curves (Accuracy & Loss)
+       |  Caption : Fig 5.9
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\vision_transformer\vit_outputs\outputs\training_curves.png
+
+Fig 17 |  Vision Transformer — Confusion Matrix
+       |  Caption : Fig 5.10
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\vision_transformer\vit_outputs\outputs\confusion_matrix.png
+
+Fig 18 |  Vision Transformer — ROC-AUC Curves
+       |  Caption : Fig 5.11
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\vision_transformer\vit_outputs\outputs\roc_auc.png
+
+Fig 19 |  Vision Transformer — GradCAM++ Samples (Correct / Wrong)
+       |  Caption : Fig 5.12
+       |  Status  : [AVAILABLE — grid images exist]
+       |  Files   :
+       |    notebooks\vision_transformer\vit_outputs\outputs\gradcam\correct\gradcam_grid.png
+       |    notebooks\vision_transformer\vit_outputs\outputs\gradcam\wrong\gradcam_grid.png
+
+------------------------------------------------------------------------
+CHAPTER 5 — RESULTS (Two-Stage Screening)
+------------------------------------------------------------------------
+
+Fig 20 |  Two-Stage Pipeline — Block Diagram
+       |  Caption : Fig 5.13 (Two-Stage block diagram)
+       |  Status  : [CREATE] — draw a flow: Input → EfficientNetV2B0 (Stage 1) →
+       |            P(DR) < 0.3? → No DR / Swin Transformer (Stage 2) → Severity class
+
+Fig 21 |  Two-Stage Pipeline — Stage 2 Confusion Matrix
+       |  Caption : Fig 5.13
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\two_stage_screening\output\confusion_matrix.png
+
+Fig 22 |  Two-Stage Pipeline — Stage 2 ROC-AUC Curves
+       |  Caption : Fig 5.14
+       |  Status  : [AVAILABLE]
+       |  File    : notebooks\two_stage_screening\output\roc_auc.png
+
+------------------------------------------------------------------------
+CHAPTER 5 — COMPARATIVE ANALYSIS
+------------------------------------------------------------------------
+
+Fig 23 |  Comparative Bar Chart of Model Accuracies
+       |  Caption : Fig 5.15
+       |  Status  : [CREATE] — grouped bar chart comparing all 4 models on
+       |            Val Accuracy, Macro F1, Weighted F1 using values from Table 5.11:
+       |              InceptionResNetV2 : 79.75%  |  Macro F1: 0.56  |  Weighted F1: 0.77
+       |              Swin Transformer  : 83.47%  |  Macro F1: 0.71  |  Weighted F1: 0.83
+       |              Vision Transformer: 85.40%  |  Macro F1: 0.72  |  Weighted F1: 0.85
+       |              Two-Stage (4-cls) : 70.00%  |  Macro F1: 0.61  |  Weighted F1: 0.69
+
+------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------
+
+AVAILABLE (can insert directly from workspace):
+  Fig 8  (2 files)  — IRV2 training curves
+  Fig 9             — IRV2 confusion matrix
+  Fig 10            — IRV2 ROC-AUC
+  Fig 11            — IRV2 GradCAM
+  Fig 12            — Swin training loss
+  Fig 13            — Swin confusion matrix
+  Fig 14            — Swin ROC-AUC
+  Fig 15 (9 files)  — Swin GradCAM correct/wrong
+  Fig 16            — ViT training curves
+  Fig 17            — ViT confusion matrix
+  Fig 18            — ViT ROC-AUC
+  Fig 19 (2 grids)  — ViT GradCAM++ grids
+  Fig 21            — Two-Stage confusion matrix
+  Fig 22            — Two-Stage ROC-AUC
+
+CREATE (you need to draw/generate these):
+  Fig 1   — System Architecture block diagram
+  Fig 2   — Data Flow Diagram (DFD)
+  Fig 3   — Activity Diagram
+  Fig 4   — Use Case Diagram
+  Fig 5   — Sequence Diagram
+  Fig 6   — APTOS 2019 class distribution chart  (can auto-generate from CSV)
+  Fig 7   — Sample fundus images collage (5 images)
+  Fig 20  — Two-Stage pipeline block diagram
+  Fig 23  — Comparative bar chart  (can auto-generate from Table 5.11 numbers)

@@ -1,0 +1,23 @@
+# Web framework
+Flask
+Werkzeug
+
+# Deep learning frameworks
+tensorflow
+torch
+torchvision
+timm
+
+# Explainability
+grad-cam
+tf-explain
+
+# Image processing
+opencv-python-headless
+Pillow
+
+# Scientific stack
+numpy
+scipy
+scikit-learn
+matplotlib

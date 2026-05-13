@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Models — RetinaScan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-decor" aria-hidden="true">
+    <div class="bg-orb bg-orb--teal"></div>
+    <div class="bg-orb bg-orb--violet"></div>
+    <div class="bg-orb bg-orb--amber"></div>
+    <div class="bg-grid"></div>
+  </div>
+
+  <!-- Header (identical to index.html) -->
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand__logo" aria-hidden="true">
+        <svg viewBox="0 0 44 44" width="36" height="36">
+          <defs>
+            <radialGradient id="eye-grad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stop-color="#1ABC9C"/>
+              <stop offset="55%" stop-color="#0D8C6F"/>
+              <stop offset="100%" stop-color="#062E24"/>
+            </radialGradient>
+            <radialGradient id="pupil-grad" cx="38%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#1a4a3a"/>
+              <stop offset="100%" stop-color="#050E0B"/>
+            </radialGradient>
+          </defs>
+          <circle cx="22" cy="22" r="20" fill="none" stroke="rgba(26,188,156,0.25)" stroke-width="1"/>
+          <circle cx="22" cy="22" r="17" fill="url(#eye-grad)"/>
+          <circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+          <circle cx="22" cy="22" r="13" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/>
+          <circle cx="22" cy="22" r="7"  fill="url(#pupil-grad)"/>
+          <circle cx="25" cy="19" r="2"   fill="#fff" opacity="0.85"/>
+          <circle cx="19" cy="25" r="1.1" fill="#fff" opacity="0.35"/>
+          <path d="M22 5 Q28 12 22 22"  fill="none" stroke="rgba(231,76,60,0.55)" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M39 22 Q30 16 22 22" fill="none" stroke="rgba(231,76,60,0.45)" stroke-width="1"   stroke-linecap="round"/>
+          <path d="M22 39 Q15 31 22 22" fill="none" stroke="rgba(231,76,60,0.45)" stroke-width="1"   stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand__text">
+        <span class="brand__name">Retina<span class="brand__name--accent">Scan</span></span>
+        <span class="brand__tag">Diabetic Retinopathy · AI Screening</span>
+      </span>
+    </a>
+    <nav class="topbar__nav" aria-label="Primary navigation">
+      <a href="/"       class="nav-link">Predict</a>
+      <a href="/models" class="nav-link nav-link--active">Models</a>
+      <div class="topbar__divider" aria-hidden="true"></div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle theme">
+        <svg class="icon-sun"  viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 17a5 5 0 100-10 5 5 0 000 10zm0 2a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm0-18a1 1 0 011 1v1a1 1 0 11-2 0V2a1 1 0 011-1zM4.22 4.22a1 1 0 011.42 0l.7.7a1 1 0 11-1.41 1.42l-.71-.71a1 1 0 010-1.41zm13.44 13.44a1 1 0 011.41 0l.71.7a1 1 0 11-1.41 1.42l-.71-.71a1 1 0 010-1.41zM1 12a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm20 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM4.22 19.78a1 1 0 010-1.41l.7-.71a1 1 0 111.42 1.42l-.71.7a1 1 0 01-1.41 0zm13.44-13.44a1 1 0 010-1.41l.71-.71a1 1 0 111.41 1.41l-.7.71a1 1 0 01-1.42 0z" fill="currentColor"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Page hero -->
+    <section class="models-hero">
+      <div class="hero__badge"><span class="pulse-dot"></span>Four Trained Architectures</div>
+      <h1 class="hero__title">Our <span class="grad-text">Models</span></h1>
+      <p class="hero__sub">
+        Each model was trained on fundus images from the APTOS-2019 and EyePACS datasets
+        to grade diabetic retinopathy across five severity levels.
+        Select any available model to run predictions with Grad-CAM explainability.
+      </p>
+    </section>
+
+    <!-- Severity legend -->
+    <div class="sev-legend">
+      <span class="sev-legend__label">Severity Scale:</span>
+      <span class="sev-chip" style="--c:#27AE60">No DR</span>
+      <span class="sev-arrow">→</span>
+      <span class="sev-chip" style="--c:#F1C40F">Mild</span>
+      <span class="sev-arrow">→</span>
+      <span class="sev-chip" style="--c:#E67E22">Moderate</span>
+      <span class="sev-arrow">→</span>
+      <span class="sev-chip" style="--c:#E74C3C">Severe</span>
+      <span class="sev-arrow">→</span>
+      <span class="sev-chip" style="--c:#922B21">Proliferative</span>
+    </div>
+
+    <!-- Cards grid -->
+    <div id="cards-grid" class="mcards-grid">
+      <div class="dd-loading">Loading models…</div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>© 2026 RetinaScan · Final-Year B.Tech Research Prototype</span>
+    <span class="footer__warn">Not for clinical use.</span>
+  </footer>
+
+  <script src="/static/js/models.js" defer></script>
+</body>
+</html>

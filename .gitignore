@@ -1,3 +1,8 @@
 *.pth
 *.pt
 *.h5
+backend/models
+backend/venv
+backend/__pycache__
+backend/outputs
+backend/uploads

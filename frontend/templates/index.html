@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RetinaScan — AI-Assisted DR Screening</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-decor" aria-hidden="true">
+    <div class="bg-orb bg-orb--teal"></div>
+    <div class="bg-orb bg-orb--violet"></div>
+    <div class="bg-orb bg-orb--amber"></div>
+    <div class="bg-grid"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand__logo" aria-hidden="true">
+        <!-- Retina / eye icon -->
+        <svg viewBox="0 0 44 44" width="36" height="36">
+          <defs>
+            <radialGradient id="eye-grad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stop-color="#1ABC9C"/>
+              <stop offset="55%" stop-color="#0D8C6F"/>
+              <stop offset="100%" stop-color="#062E24"/>
+            </radialGradient>
+            <radialGradient id="pupil-grad" cx="38%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#1a4a3a"/>
+              <stop offset="100%" stop-color="#050E0B"/>
+            </radialGradient>
+          </defs>
+          <!-- Sclera glow ring -->
+          <circle cx="22" cy="22" r="20" fill="none" stroke="rgba(26,188,156,0.25)" stroke-width="1"/>
+          <!-- Iris -->
+          <circle cx="22" cy="22" r="17" fill="url(#eye-grad)"/>
+          <!-- Iris texture lines -->
+          <circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+          <circle cx="22" cy="22" r="13" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/>
+          <!-- Pupil -->
+          <circle cx="22" cy="22" r="7" fill="url(#pupil-grad)"/>
+          <!-- Specular highlights -->
+          <circle cx="25" cy="19" r="2"   fill="#fff" opacity="0.85"/>
+          <circle cx="19" cy="25" r="1.1" fill="#fff" opacity="0.35"/>
+          <!-- Blood vessel hints -->
+          <path d="M22 5 Q28 12 22 22" fill="none" stroke="rgba(231,76,60,0.55)" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M39 22 Q30 16 22 22" fill="none" stroke="rgba(231,76,60,0.45)" stroke-width="1"   stroke-linecap="round"/>
+          <path d="M22 39 Q15 31 22 22" fill="none" stroke="rgba(231,76,60,0.45)" stroke-width="1"   stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand__text">
+        <span class="brand__name">Retina<span class="brand__name--accent">Scan</span></span>
+        <span class="brand__tag">Diabetic Retinopathy · AI Screening</span>
+      </span>
+    </a>
+
+    <nav class="topbar__nav" aria-label="Primary navigation">
+      <a href="/models" class="nav-link">Models</a>
+      <a href="#about"  class="nav-link">About</a>
+      <div class="topbar__divider" aria-hidden="true"></div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle theme">
+        <svg class="icon-sun"  viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 17a5 5 0 100-10 5 5 0 000 10zm0 2a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm0-18a1 1 0 011 1v1a1 1 0 11-2 0V2a1 1 0 011-1zM4.22 4.22a1 1 0 011.42 0l.7.7a1 1 0 11-1.41 1.42l-.71-.71a1 1 0 010-1.41zm13.44 13.44a1 1 0 011.41 0l.71.7a1 1 0 11-1.41 1.42l-.71-.71a1 1 0 010-1.41zM1 12a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm20 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM4.22 19.78a1 1 0 010-1.41l.7-.71a1 1 0 111.42 1.42l-.71.7a1 1 0 01-1.41 0zm13.44-13.44a1 1 0 010-1.41l.71-.71a1 1 0 111.41 1.41l-.7.71a1 1 0 01-1.42 0z" fill="currentColor"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero__badge"><span class="pulse-dot"></span>Final-Year Research Prototype</div>
+      <h1 class="hero__title">
+        Detect Diabetic Retinopathy with <span class="grad-text">Deep Learning</span>
+      </h1>
+      <p class="hero__sub">
+        Upload a fundus photograph and pick one of four state-of-the-art deep learning models.
+        Each prediction can be verified visually with a Grad-CAM heatmap so clinicians can see
+        <em>why</em> the model decided.
+      </p>
+    </section>
+
+    <!-- Model picker -->
+    <section id="model-pick" class="panel">
+      <header class="panel__header panel__header--row">
+        <div>
+          <h2 class="panel__title">1. Choose a Model</h2>
+          <p class="panel__sub">Pick a trained model from the dropdown, or <a href="/models" class="text-link">explore all models in detail →</a></p>
+        </div>
+      </header>
+      <!-- Dropdown injected by JS -->
+      <div id="model-dropdown-wrap" class="model-dropdown-wrap">
+        <div class="dd-loading">Loading models…</div>
+      </div>
+      <!-- Selected model info strip -->
+      <div id="model-info-strip" class="model-info-strip hidden">
+        <div class="mis__left">
+          <div class="mis__name" id="mis-name">—</div>
+          <div class="mis__tag"  id="mis-tag">—</div>
+        </div>
+        <div class="mis__stats" id="mis-stats"></div>
+        <a href="/models" class="btn btn--ghost mis__details-btn">View details →</a>
+      </div>
+    </section>
+
+    <!-- Upload + result -->
+    <section class="panel">
+      <header class="panel__header">
+        <h2 class="panel__title">2. Upload a Fundus Image</h2>
+        <p class="panel__sub">JPG/PNG/WEBP, up to 10 MB. Image is resized to 224×224 on the server.</p>
+      </header>
+
+      <!-- IDLE state -->
+      <div id="state-idle" class="state state--active">
+        <label id="dropzone" class="dropzone" for="file-input">
+          <input id="file-input" type="file" accept="image/*" hidden />
+          <div class="dropzone__icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="56" height="56">
+              <path d="M32 8v32m0 0l-12-12m12 12l12-12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 44v8a4 4 0 004 4h32a4 4 0 004-4v-8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="dropzone__text">
+            <strong>Drop a fundus image here</strong>
+            <span>or click to browse</span>
+          </div>
+          <div class="dropzone__hint">Supports JPG, PNG, BMP, TIFF, WEBP — max 10 MB</div>
+        </label>
+
+        <div id="preview" class="preview hidden">
+          <img id="preview-img" alt="Selected fundus" />
+          <div class="preview__meta">
+            <div id="preview-name" class="preview__name"></div>
+            <div id="preview-size" class="preview__size"></div>
+          </div>
+          <div class="preview__actions">
+            <button id="reset-btn" class="btn btn--ghost" type="button">Change image</button>
+            <button id="analyze-btn" class="btn btn--primary" type="button" disabled>
+              <span class="btn__label">Analyze</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYZING state -->
+      <div id="state-analyzing" class="state">
+        <div class="scanner">
+          <img id="scanner-img" alt="" />
+          <div class="scanner__beam"></div>
+          <div class="scanner__ring"></div>
+        </div>
+        <div class="scanner__status">
+          <div class="dot-spinner"><span></span><span></span><span></span></div>
+          <span id="analyzing-label">Analyzing fundus image…</span>
+        </div>
+      </div>
+
+      <!-- RESULT state -->
+      <div id="state-result" class="state">
+        <article class="result">
+          <header class="result__head">
+            <div>
+              <div class="result__model" id="result-model">—</div>
+              <h3 class="result__title" id="result-title">—</h3>
+              <p class="result__rec" id="result-rec">—</p>
+              <p class="result__note" id="result-note"></p>
+            </div>
+            <!-- Confidence ring -->
+            <div class="confidence">
+              <svg viewBox="0 0 120 120" width="140" height="140" class="confidence__svg">
+                <circle cx="60" cy="60" r="52" class="confidence__track"/>
+                <circle id="confidence-ring" cx="60" cy="60" r="52" class="confidence__bar"
+                  style="stroke-dasharray: 326.7; stroke-dashoffset: 326.7;"/>
+              </svg>
+              <div class="confidence__center">
+                <div class="confidence__value"><span id="confidence-pct">0</span><small>%</small></div>
+                <div class="confidence__label">confidence</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="result__body">
+            <div class="probs">
+              <h4 class="probs__title">Per-Class Probability</h4>
+              <ul id="prob-list" class="prob-list"></ul>
+            </div>
+
+            <div class="explain">
+              <h4 class="explain__title">Visual Explanation (Grad-CAM)</h4>
+              <p class="explain__sub">See which regions of the retina influenced the model's decision.</p>
+              <button id="gradcam-btn" class="btn btn--accent" type="button">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8z" fill="currentColor"/></svg>
+                <span id="gradcam-btn-label">Show Grad-CAM</span>
+              </button>
+              <div id="gradcam-view" class="gradcam hidden">
+                <div class="gradcam__cell">
+                  <img id="gradcam-original" alt="Original fundus" />
+                  <span class="gradcam__caption">Original</span>
+                </div>
+                <div class="gradcam__cell">
+                  <img id="gradcam-heatmap" alt="Grad-CAM heatmap" />
+                  <span class="gradcam__caption">Grad-CAM Overlay</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="result__foot">
+            <button id="new-btn" class="btn btn--ghost" type="button">Analyze another image</button>
+            <p class="disclaimer">
+              This tool is a research prototype and <strong>does not</strong> constitute a medical diagnosis.
+              Always consult a licensed ophthalmologist.
+            </p>
+          </footer>
+        </article>
+      </div>
+
+      <!-- ERROR state -->
+      <div id="state-error" class="state">
+        <div class="error-card">
+          <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+          <h3 id="error-title">Something went wrong</h3>
+          <p id="error-message">—</p>
+          <button id="error-retry" class="btn btn--primary" type="button">Try again</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="panel about">
+      <h2 class="panel__title">About this project</h2>
+      <p>
+        RetinaScan is a final-year B.Tech research prototype that compares CNN and Transformer
+        architectures on diabetic retinopathy severity grading. We trained four models on the
+        APTOS-2019 and EyePACS datasets and surface Grad-CAM explanations so clinicians can
+        independently verify each prediction.
+      </p>
+      <ul class="about__chips">
+        <li>5 Severity Grades</li>
+        <li>4 Models</li>
+        <li>Grad-CAM Verification</li>
+        <li>Real-time Inference</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>© 2026 RetinaScan · Final-Year B.Tech Research Prototype</span>
+    <span class="footer__warn">Not for clinical use.</span>
+  </footer>
+
+  <script src="/static/js/app.js" defer></script>
+</body>
+</html>
